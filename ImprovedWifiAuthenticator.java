@@ -574,20 +574,35 @@ class StartupUtils {
 
 class NetworkUtils {
     public static boolean isInternetAvailable() {
+        // Use portal check instead ofGoogle check
+        return isWiFiPortalAvailable();
+    }
+    
+    public static boolean isWiFiPortalAvailable() {
         try {
-            URL url = new URL("http://www.google.com");
+            URL url = new URL("http://172.16.68.6:8090/login.xml");
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setConnectTimeout(3000);
-            connection.setReadTimeout(3000);
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
             connection.setRequestMethod("HEAD");
             int responseCode = connection.getResponseCode();
-            return (200 <= responseCode && responseCode <= 399);
+            connection.disconnect();
+            return (responseCode > 0);
         } catch (Exception e) {
             return false;
         }
     }
+    
+    public static String getNetworkStatus() {
+        boolean portalAvailable = isWiFiPortalAvailable();
+        
+        if (portalAvailable) {
+            return "Connected to WiFi - Authentication Required";
+        } else {
+            return "No Network Connection";
+        }
+    }
 }
-
 public class ImprovedWifiAuthenticator extends JFrame {
 
     private static final String LOGIN_URL = "http://172.16.68.6:8090/login.xml";
@@ -733,7 +748,7 @@ public class ImprovedWifiAuthenticator extends JFrame {
         connectionStatusLabel.setForeground(ModernColors.TEXT_SECONDARY);
 
         header.add(titlePanel, BorderLayout.WEST);
-        header.add(connectionStatusLabel, BorderLayout.EAST);
+        //header.add(connectionStatusLabel, BorderLayout.EAST);
 
         return header;
     }
@@ -1178,17 +1193,21 @@ public class ImprovedWifiAuthenticator extends JFrame {
     }
 
     private void updateConnectionStatus() {
-        SwingUtilities.invokeLater(() -> {
-            boolean connected = NetworkUtils.isInternetAvailable();
-            if (connected) {
-                connectionStatusLabel.setText("🟢 Online");
-                connectionStatusLabel.setForeground(ModernColors.SUCCESS);
-            } else {
-                connectionStatusLabel.setText("🔴 Offline");
-                connectionStatusLabel.setForeground(ModernColors.ERROR);
-            }
-        });
-    }
+    SwingUtilities.invokeLater(() -> {
+        String networkStatus = NetworkUtils.getNetworkStatus();
+        
+        if (networkStatus.contains("Connected to Internet")) {
+            connectionStatusLabel.setText("🟢 Online");
+            connectionStatusLabel.setForeground(ModernColors.SUCCESS);
+        } else if (networkStatus.contains("Authentication Required")) {
+            connectionStatusLabel.setText("🟡 WiFi Connected - Auth Required");
+            connectionStatusLabel.setForeground(new Color(255, 193, 7));
+        } else {
+            connectionStatusLabel.setText("🔴 No Network");
+            connectionStatusLabel.setForeground(ModernColors.ERROR);
+        }
+    });
+}
 
     private void testNetworkConnection() {
         new Thread(() -> {
@@ -1371,10 +1390,10 @@ private boolean attemptLogout() {
     try {
         logMessage("Attempting logout for user: " + currentLoggedInUsername);
 
-        if (!NetworkUtils.isInternetAvailable()) {
-            logMessage("No internet connection available for logout");
-            return false;
-        }
+        if (!NetworkUtils.isWiFiPortalAvailable()) {
+    logMessage("No WiFi portal connection available - ensure you're connected to WiFi network");
+    return false;
+}
 
         URI uri = new URI(LOGOUT_URL);
         URL url = uri.toURL();
@@ -1640,10 +1659,10 @@ private boolean attemptLogout() {
     private boolean attemptLogin(String username, String password) {
         HttpURLConnection connection = null;
         try {
-            if (!NetworkUtils.isInternetAvailable()) {
-                logMessage("No internet connection available");
-                return false;
-            }
+            if (!NetworkUtils.isWiFiPortalAvailable()) {
+    logMessage("No WiFi portal connection available - ensure you're connected to WiFi network");
+    return false;
+}
 
             URI uri = new URI(LOGIN_URL);
             URL url = uri.toURL();
