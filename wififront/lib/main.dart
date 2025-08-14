@@ -2,8 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'wifi_auth_service.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
+void _keepFlutterToastG(String text) {
+    // Just enough to fool ProGuard into keeping the class
+    Fluttertoast.showToast(
+                msg: text,
+                backgroundColor: Colors.black,
+                textColor: Colors.green,
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+              );
+  }
+
+void _keepFlutterToastR(String text) {
+    // Just enough to fool ProGuard into keeping the class
+    Fluttertoast.showToast(
+                msg: text,
+                backgroundColor: Colors.black,
+                textColor: Colors.red,
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+              );
+  }
 void main() {
+  _keepFlutterToastG("");
+  _keepFlutterToastR("");
   runApp(const MyApp());
 }
 
@@ -44,13 +68,12 @@ class _HomePage extends State<HomePage> {
   String lastUsedUsername = ''; // Track last used username for logout
   TextEditingController Interval = TextEditingController();
   TextEditingController SpecTime = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
     loadData();
   }
-
   void loadData() async {
     await loadCredentialsFromLocal();
     await loadActivityLogs();
@@ -61,12 +84,12 @@ class _HomePage extends State<HomePage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedCredentials = prefs.getStringList('saved_credentials') ?? [];
-      
+
       setState(() {
         credentials.clear();
         user.clear();
         password.clear();
-        
+
         // Load saved credentials
         for (int i = 0; i < savedCredentials.length; i++) {
           final credData = jsonDecode(savedCredentials[i]);
@@ -75,17 +98,17 @@ class _HomePage extends State<HomePage> {
             'username': credData['username'],
             'encryptedPassword': credData['password'],
           });
-          
+
           // Add to UI controllers
           user.add(TextEditingController(text: credData['username']));
           password.add(TextEditingController(text: '••••••••'));
         }
-        
+
         // Always add one empty row for new input
         user.add(TextEditingController());
         password.add(TextEditingController());
       });
-      
+
       print('Loaded ${savedCredentials.length} saved credentials');
     } catch (e) {
       print('Error loading credentials: $e');
@@ -104,14 +127,16 @@ class _HomePage extends State<HomePage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       List<String> credentialsToSave = [];
-      
+
       for (var cred in credentials) {
-        credentialsToSave.add(jsonEncode({
-          'username': cred['username'],
-          'password': cred['encryptedPassword'],
-        }));
+        credentialsToSave.add(
+          jsonEncode({
+            'username': cred['username'],
+            'password': cred['encryptedPassword'],
+          }),
+        );
       }
-      
+
       await prefs.setStringList('saved_credentials', credentialsToSave);
       print('Saved ${credentialsToSave.length} credentials to storage');
     } catch (e) {
@@ -150,11 +175,13 @@ class _HomePage extends State<HomePage> {
     if (user.isNotEmpty && password.isNotEmpty) {
       String username = user.last.text;
       String pass = password.last.text;
-      
+
       if (username.isNotEmpty && pass.isNotEmpty && pass != '••••••••') {
         // Check if credential already exists
-        bool alreadyExists = credentials.any((cred) => cred['username'] == username);
-        
+        bool alreadyExists = credentials.any(
+          (cred) => cred['username'] == username,
+        );
+
         if (!alreadyExists) {
           // Add to local credentials list
           setState(() {
@@ -164,12 +191,12 @@ class _HomePage extends State<HomePage> {
               'encryptedPassword': pass,
             });
           });
-          
+
           // Save to persistent storage
           await saveCredentialsToLocal();
-          
+
           print('Credential saved: $username');
-          
+
           // Update the text field to show saved indicator
           password.last.text = '••••••••';
         } else {
@@ -177,7 +204,7 @@ class _HomePage extends State<HomePage> {
         }
       }
     }
-    
+
     // Add empty row for new input
     setState(() {
       user.add(TextEditingController());
@@ -195,83 +222,101 @@ class _HomePage extends State<HomePage> {
   void logIN() async {
     try {
       bool loginSuccessful = false;
-      
+
       // First try with any fresh credentials in input fields
       for (int i = 0; i < user.length; i++) {
-        if (user[i].text.isNotEmpty && 
-            i < password.length && 
-            password[i].text.isNotEmpty && 
+        if (user[i].text.isNotEmpty &&
+            i < password.length &&
+            password[i].text.isNotEmpty &&
             password[i].text != '••••••••') {
-          
           lastUsedUsername = user[i].text; // Track for logout
           print('Attempting login with fresh credentials: ${user[i].text}');
-          
+
           setState(() {
-            activityLog.add('${DateTime.now().toString().substring(11, 19)}: Attempting login for ${user[i].text}');
+            activityLog.add(
+              '${DateTime.now().toString().substring(11, 19)}: Attempting login for ${user[i].text}',
+            );
+            _keepFlutterToastG('Attempting Login...');
           });
-          
+
           final result = await WiFiAuthService.attemptLogin(
-            user[i].text, 
-            password[i].text
+            user[i].text,
+            password[i].text,
           );
-          
+
           if (result['success'] == true) {
             print('Login successful: ${result['message']}');
             setState(() {
-              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+              activityLog.add(
+                '${DateTime.now().toString().substring(11, 19)}: ${result['message']}',
+              );_keepFlutterToastG('Login Successful');
             });
             loginSuccessful = true;
             break;
           } else {
             print('Login failed: ${result['message']}');
             setState(() {
-              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+              activityLog.add(
+                '${DateTime.now().toString().substring(11, 19)}: ${result['message']}',
+              );
+              _keepFlutterToastR('Login failed');
             });
           }
         }
       }
-      
+
       // If no fresh credentials worked, try saved credentials
       if (!loginSuccessful && credentials.isNotEmpty) {
         for (var cred in credentials) {
           lastUsedUsername = cred['username']; // Track for logout
           print('Trying saved credential: ${cred['username']}');
-          
+
           setState(() {
-            activityLog.add('${DateTime.now().toString().substring(11, 19)}: Trying saved credential ${cred['username']}');
+            activityLog.add(
+              '${DateTime.now().toString().substring(11, 19)}: Trying saved credential ${cred['username']}',
+            );
           });
-          
+
           final result = await WiFiAuthService.attemptLogin(
-            cred['username'], 
-            cred['encryptedPassword']
+            cred['username'],
+            cred['encryptedPassword'],
           );
-          
+
           if (result['success'] == true) {
-            print('Login successful with saved credential: ${result['message']}');
+            print(
+              'Login successful with saved credential: ${result['message']}',
+            );
             setState(() {
-              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+              activityLog.add(
+                '${DateTime.now().toString().substring(11, 19)}: ${result['message']}',
+              );_keepFlutterToastG('Login Successful');
             });
             loginSuccessful = true;
             break;
           } else {
             print('Login failed with saved credential: ${result['message']}');
             setState(() {
-              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+              activityLog.add(
+                '${DateTime.now().toString().substring(11, 19)}: ${result['message']}',
+              );_keepFlutterToastR('Login failed');
             });
           }
         }
       }
-      
+
       if (!loginSuccessful) {
         setState(() {
-          activityLog.add('${DateTime.now().toString().substring(11, 19)}: All login attempts failed. Please check credentials and network.');
+          activityLog.add(
+            '${DateTime.now().toString().substring(11, 19)}: All login attempts failed. Please check credentials and network.',
+          );
         });
       }
-      
     } catch (e) {
       print('Error during login: $e');
       setState(() {
-        activityLog.add('${DateTime.now().toString().substring(11, 19)}: Login error - $e');
+        activityLog.add(
+          '${DateTime.now().toString().substring(11, 19)}: Login error - $e',
+        );
       });
     }
   }
@@ -279,29 +324,38 @@ class _HomePage extends State<HomePage> {
   void logOUT() async {
     try {
       setState(() {
-        activityLog.add('${DateTime.now().toString().substring(11, 19)}: Attempting logout...');
+        activityLog.add(
+          '${DateTime.now().toString().substring(11, 19)}: Attempting logout...',
+        );_keepFlutterToastG('Attempting Logout...');
       });
-      
+
       // Use the last successfully logged in username for logout
-      final result = await WiFiAuthService.attemptLogout(lastUsedUsername.isNotEmpty ? lastUsedUsername : null);
-      
+      final result = await WiFiAuthService.attemptLogout(
+        lastUsedUsername.isNotEmpty ? lastUsedUsername : null,
+      );
+
       if (result['success'] == true) {
         print('Logout successful: ${result['message']}');
         setState(() {
-          activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
-          lastUsedUsername = ''; // Clear after successful logout
+          activityLog.add(
+            '${DateTime.now().toString().substring(11, 19)}: ${result['message']}',
+          );
+          lastUsedUsername = '';_keepFlutterToastG('Logout successful');
         });
       } else {
         print('Logout failed: ${result['message']}');
         setState(() {
-          activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+          activityLog.add(
+            '${DateTime.now().toString().substring(11, 19)}: ${result['message']}',
+          );_keepFlutterToastR('Logout Failed');
         });
       }
-      
     } catch (e) {
       print('Error during logout: $e');
       setState(() {
-        activityLog.add('${DateTime.now().toString().substring(11, 19)}: Logout error - $e');
+        activityLog.add(
+          '${DateTime.now().toString().substring(11, 19)}: Logout error - $e',
+        );
       });
     }
   }
@@ -311,14 +365,14 @@ class _HomePage extends State<HomePage> {
       // Remove from input lists
       if (index < user.length) user.removeAt(index);
       if (index < password.length) password.removeAt(index);
-      
+
       // Remove from saved credentials if it's a saved credential
       if (index < credentials.length) {
         credentials.removeAt(index);
         print('Credential removed from storage');
       }
     });
-    
+
     // Update saved credentials in storage
     await saveCredentialsToLocal();
   }
@@ -567,7 +621,8 @@ class SchedulerSettingsSheet extends StatefulWidget {
   final ValueChanged<bool> onChangedAL;
   final Future<void> Function() Start;
 
-  const SchedulerSettingsSheet({super.key, 
+  const SchedulerSettingsSheet({
+    super.key,
     required this.isChecked1,
     required this.isChecked2,
     required this.isChecked3,
