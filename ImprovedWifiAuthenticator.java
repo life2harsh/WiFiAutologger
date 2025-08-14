@@ -6,8 +6,6 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
-//import java.awt.event.ActionEvent;
-//import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
@@ -574,7 +572,6 @@ class StartupUtils {
 
 class NetworkUtils {
     public static boolean isInternetAvailable() {
-        // Use portal check instead ofGoogle check
         return isWiFiPortalAvailable();
     }
     
@@ -748,7 +745,6 @@ public class ImprovedWifiAuthenticator extends JFrame {
         connectionStatusLabel.setForeground(ModernColors.TEXT_SECONDARY);
 
         header.add(titlePanel, BorderLayout.WEST);
-        //header.add(connectionStatusLabel, BorderLayout.EAST);
 
         return header;
     }

@@ -24,7 +24,7 @@ public class SchedulerService {
     private TaskScheduler taskScheduler;
     private ScheduledFuture<?> scheduledTask;
     private boolean isRunning = false;
-    private String schedulerType = "interval"; // "interval" or "specific"
+    private String schedulerType = "interval";
     private int intervalValue = 30;
     private String timeUnit = "minutes";
     private String specificTime = "09:00";
@@ -57,7 +57,6 @@ public class SchedulerService {
         activityLogService.addLog(String.format("[%s]: Scheduler started (%s)", 
             getCurrentTimestamp(), type));
 
-        // Auto-login on start if enabled
         if (autoLogin) {
             credentialService.loginWithStoredCredentials();
         }
@@ -81,12 +80,10 @@ public class SchedulerService {
     }
 
     private void startSpecificTimeScheduler() {
-        // For specific time, we'll check every minute if it's time to run
         scheduledTask = taskScheduler.scheduleAtFixedRate(() -> {
             LocalTime now = LocalTime.now();
             LocalTime targetTime = LocalTime.parse(specificTime);
             
-            // Check if current time matches target time (within a minute)
             if (now.getHour() == targetTime.getHour() && now.getMinute() == targetTime.getMinute()) {
                 activityLogService.addLog(String.format("[%s]: Scheduled login attempt (specific time)", getCurrentTimestamp()));
                 credentialService.loginWithStoredCredentials();
@@ -99,7 +96,7 @@ public class SchedulerService {
             case "seconds" -> value * 1000L;
             case "minutes" -> value * 60 * 1000L;
             case "hours" -> value * 60 * 60 * 1000L;
-            default -> value * 60 * 1000L; // default to minutes
+            default -> value * 60 * 1000L;
         };
     }
 

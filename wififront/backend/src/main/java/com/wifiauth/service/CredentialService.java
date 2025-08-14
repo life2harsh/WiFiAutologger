@@ -58,7 +58,6 @@ public class CredentialService {
 
     public boolean attemptLogin(String username, String password) {
         try {
-            // Use the exact format from your working Java application
             String urlParameters = String.format(
                 "mode=%s&username=%s&password=%s&a=%d&producttype=%s",
                 LOGIN_MODE,
@@ -72,8 +71,7 @@ public class CredentialService {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
-            
-            // Add browser-like headers that match your working application
+
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             connection.setRequestProperty("User-Agent", "WiFi-Authenticator/2.0");
             connection.setRequestProperty("Accept", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5");
@@ -83,7 +81,6 @@ public class CredentialService {
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(15000);
 
-            // Send the parameters
             try (OutputStream os = connection.getOutputStream()) {
                 os.write(urlParameters.getBytes(StandardCharsets.UTF_8));
                 os.flush();
@@ -91,7 +88,6 @@ public class CredentialService {
 
             int responseCode = connection.getResponseCode();
             
-            // Read response to check for success/failure message
             String response = "";
             try {
                 java.io.BufferedReader reader = new java.io.BufferedReader(
@@ -104,16 +100,14 @@ public class CredentialService {
                 response = responseBuilder.toString();
                 reader.close();
             } catch (Exception e) {
-                // Handle error response
             }
 
             activityLogService.addLog(String.format("[%s]: Login attempt for user: %s - Response: %d", 
                 getCurrentTimestamp(), username, responseCode));
             
             if (responseCode == HttpURLConnection.HTTP_OK) {
-                // Check if response contains success indicators
+    
                 if (response.contains("LIVE") || response.contains("status")) {
-                    // Parse XML response to check actual status
                     if (response.contains("<status><![CDATA[LIVE]]></status>")) {
                         activityLogService.addLog(String.format("[%s]: Login successful for user: %s", 
                             getCurrentTimestamp(), username));
@@ -142,11 +136,10 @@ public class CredentialService {
 
     public boolean attemptLogout() {
         try {
-            // Include username in logout (from your working application)
             String urlParameters = String.format(
                 "mode=%s&username=%s&a=%d&producttype=%s",
                 LOGOUT_MODE,
-                "user", // Default username for logout
+                "user",
                 System.currentTimeMillis(),
                 PRODUCTTYPE
             );
@@ -156,7 +149,6 @@ public class CredentialService {
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
             
-            // Add the same headers as login
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             connection.setRequestProperty("User-Agent", "WiFi-Authenticator/2.0");
             connection.setRequestProperty("Accept", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5");
@@ -166,7 +158,6 @@ public class CredentialService {
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(15000);
 
-            // Send the parameters
             try (OutputStream os = connection.getOutputStream()) {
                 os.write(urlParameters.getBytes(StandardCharsets.UTF_8));
                 os.flush();
@@ -186,7 +177,6 @@ public class CredentialService {
                 return false;
             }
         } catch (java.net.SocketTimeoutException e) {
-            // Timeout often means successful logout for WiFi systems
             activityLogService.addLog(String.format("[%s]: Logout timed out - likely successful", 
                 getCurrentTimestamp()));
             return true;

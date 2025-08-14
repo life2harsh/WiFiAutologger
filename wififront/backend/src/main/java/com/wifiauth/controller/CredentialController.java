@@ -51,7 +51,6 @@ public class CredentialController {
             return ResponseEntity.ok(Map.of("success", success, "message", 
                 success ? "Login successful" : "Login failed"));
         } else {
-            // Try login with stored credentials
             boolean success = credentialService.loginWithStoredCredentials();
             return ResponseEntity.ok(Map.of("success", success, "message", 
                 success ? "Login successful with stored credentials" : "Login failed"));

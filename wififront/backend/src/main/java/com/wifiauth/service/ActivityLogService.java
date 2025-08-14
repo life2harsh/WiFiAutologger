@@ -14,7 +14,6 @@ public class ActivityLogService {
     
     public void addLog(String message) {
         activityLogs.add(message);
-        // Keep only the last 100 logs to prevent memory issues
         if (activityLogs.size() > 100) {
             activityLogs.remove(0);
         }

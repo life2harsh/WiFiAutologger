@@ -5,7 +5,6 @@ import 'wifi_auth_service.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 void _keepFlutterToastG(String text) {
-    // Just enough to fool ProGuard into keeping the class
     Fluttertoast.showToast(
                 msg: text,
                 backgroundColor: Colors.black,
@@ -16,7 +15,6 @@ void _keepFlutterToastG(String text) {
   }
 
 void _keepFlutterToastR(String text) {
-    // Just enough to fool ProGuard into keeping the class
     Fluttertoast.showToast(
                 msg: text,
                 backgroundColor: Colors.black,
@@ -34,7 +32,6 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -65,7 +62,7 @@ class _HomePage extends State<HomePage> {
   bool isChecked3 = false;
   bool isSchedulerRunning = false;
   String schedulerStatus = 'Stopped';
-  String lastUsedUsername = ''; // Track last used username for logout
+  String lastUsedUsername = '';
   TextEditingController Interval = TextEditingController();
   TextEditingController SpecTime = TextEditingController();
 
@@ -92,7 +89,6 @@ class _HomePage extends State<HomePage> {
         user.clear();
         password.clear();
 
-        // Load saved credentials
         for (int i = 0; i < savedCredentials.length; i++) {
           final credData = jsonDecode(savedCredentials[i]);
           credentials.add({
@@ -101,12 +97,10 @@ class _HomePage extends State<HomePage> {
             'encryptedPassword': credData['password'],
           });
 
-          // Add to UI controllers
           user.add(TextEditingController(text: credData['username']));
           password.add(TextEditingController(text: '••••••••'));
         }
 
-        // Always add one empty row for new input
         user.add(TextEditingController());
         password.add(TextEditingController());
       });
@@ -115,7 +109,6 @@ class _HomePage extends State<HomePage> {
     } catch (e) {
       print('Error loading credentials: $e');
       _keepFlutterToastR('Error loading credentials: $e');
-      // Fallback - just add empty row
       setState(() {
         credentials = [];
         user.clear();
@@ -150,13 +143,9 @@ class _HomePage extends State<HomePage> {
   }
 
   Future<void> loadActivityLogs() async {
-    // For standalone app, maintain logs locally
-    // You could save these to shared_preferences
-    // For now, just keep them in memory
   }
 
   Future<void> loadSchedulerStatus() async {
-    // For standalone app, maintain scheduler status locally
     setState(() {
       isSchedulerRunning = false;
       schedulerStatus = 'Stopped';
@@ -236,7 +225,7 @@ class _HomePage extends State<HomePage> {
             i < password.length &&
             password[i].text.isNotEmpty &&
             password[i].text != '••••••••') {
-          lastUsedUsername = user[i].text; // Track for logout
+          lastUsedUsername = user[i].text;
           print('Attempting login with fresh credentials: ${user[i].text}');
 
           setState(() {
@@ -275,7 +264,7 @@ class _HomePage extends State<HomePage> {
       // If no fresh credentials worked, try saved credentials
       if (!loginSuccessful && credentials.isNotEmpty) {
         for (var cred in credentials) {
-          lastUsedUsername = cred['username']; // Track for logout
+          lastUsedUsername = cred['username'];
           print('Trying saved credential: ${cred['username']}');
 
           setState(() {

@@ -25,7 +25,6 @@ public class Credential {
         this.encryptedPassword = encryptedPassword;
     }
 
-    // Getters and Setters
     public Long getId() {
         return id;
     }

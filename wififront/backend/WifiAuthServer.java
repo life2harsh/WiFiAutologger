@@ -34,7 +34,6 @@ public class WifiAuthServer {
     public static void main(String[] args) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
         
-        // Add CORS headers to all responses
         server.createContext("/api/credentials", new CredentialsHandler());
         server.createContext("/api/scheduler", new SchedulerHandler());
         server.createContext("/api/activity-log", new ActivityLogHandler());
@@ -49,7 +48,6 @@ public class WifiAuthServer {
     static class CredentialsHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            // Add CORS headers
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
             exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
@@ -251,7 +249,6 @@ public class WifiAuthServer {
         }
     }
     
-    // Utility methods
     private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         exchange.sendResponseHeaders(statusCode, response.getBytes().length);
@@ -426,7 +423,7 @@ public class WifiAuthServer {
             case "seconds" -> value * 1000L;
             case "minutes" -> value * 60 * 1000L;
             case "hours" -> value * 60 * 60 * 1000L;
-            default -> value * 60 * 1000L; // default to minutes
+            default -> value * 60 * 1000L;
         };
     }
     
