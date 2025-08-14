@@ -84,6 +84,8 @@ class _HomePage extends State<HomePage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedCredentials = prefs.getStringList('saved_credentials') ?? [];
+      
+      _keepFlutterToastG('Loading ${savedCredentials.length} saved credentials');
 
       setState(() {
         credentials.clear();
@@ -112,6 +114,7 @@ class _HomePage extends State<HomePage> {
       print('Loaded ${savedCredentials.length} saved credentials');
     } catch (e) {
       print('Error loading credentials: $e');
+      _keepFlutterToastR('Error loading credentials: $e');
       // Fallback - just add empty row
       setState(() {
         credentials = [];
@@ -139,8 +142,10 @@ class _HomePage extends State<HomePage> {
 
       await prefs.setStringList('saved_credentials', credentialsToSave);
       print('Saved ${credentialsToSave.length} credentials to storage');
+      _keepFlutterToastG('Saved ${credentialsToSave.length} credentials');
     } catch (e) {
       print('Error saving credentials: $e');
+      _keepFlutterToastR('Error saving credentials: $e');
     }
   }
 
@@ -196,11 +201,13 @@ class _HomePage extends State<HomePage> {
           await saveCredentialsToLocal();
 
           print('Credential saved: $username');
+          _keepFlutterToastG('Credential added: $username');
 
           // Update the text field to show saved indicator
           password.last.text = '••••••••';
         } else {
           print('Credential already exists for: $username');
+          _keepFlutterToastR('Credential already exists for: $username');
         }
       }
     }
