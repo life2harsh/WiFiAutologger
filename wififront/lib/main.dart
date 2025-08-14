@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'wifi_auth_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,7 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Wifi Auto Logger',
+      title: 'WifiAL',
       theme: ThemeData.dark(),
       debugShowCheckedModeBanner: false,
       home: HomePage(),
@@ -22,6 +25,8 @@ class MyApp extends StatelessWidget {
 DateTime now = DateTime.now();
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   _HomePage createState() => _HomePage();
 }
@@ -30,55 +35,292 @@ class _HomePage extends State<HomePage> {
   List<TextEditingController> user = [];
   List<TextEditingController> password = [];
   List<String> activityLog = [];
+  List<Map<String, dynamic>> credentials = [];
   bool isChecked1 = false;
   bool isChecked2 = false;
   bool isChecked3 = false;
+  bool isSchedulerRunning = false;
+  String schedulerStatus = 'Stopped';
+  String lastUsedUsername = ''; // Track last used username for logout
   TextEditingController Interval = TextEditingController();
   TextEditingController SpecTime = TextEditingController();
-  void StartSched() {
+  
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  void loadData() async {
+    await loadCredentialsFromLocal();
+    await loadActivityLogs();
+    await loadSchedulerStatus();
+  }
+
+  Future<void> loadCredentialsFromLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedCredentials = prefs.getStringList('saved_credentials') ?? [];
+      
+      setState(() {
+        credentials.clear();
+        user.clear();
+        password.clear();
+        
+        // Load saved credentials
+        for (int i = 0; i < savedCredentials.length; i++) {
+          final credData = jsonDecode(savedCredentials[i]);
+          credentials.add({
+            'id': i + 1,
+            'username': credData['username'],
+            'encryptedPassword': credData['password'],
+          });
+          
+          // Add to UI controllers
+          user.add(TextEditingController(text: credData['username']));
+          password.add(TextEditingController(text: '••••••••'));
+        }
+        
+        // Always add one empty row for new input
+        user.add(TextEditingController());
+        password.add(TextEditingController());
+      });
+      
+      print('Loaded ${savedCredentials.length} saved credentials');
+    } catch (e) {
+      print('Error loading credentials: $e');
+      // Fallback - just add empty row
+      setState(() {
+        credentials = [];
+        user.clear();
+        password.clear();
+        user.add(TextEditingController());
+        password.add(TextEditingController());
+      });
+    }
+  }
+
+  Future<void> saveCredentialsToLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      List<String> credentialsToSave = [];
+      
+      for (var cred in credentials) {
+        credentialsToSave.add(jsonEncode({
+          'username': cred['username'],
+          'password': cred['encryptedPassword'],
+        }));
+      }
+      
+      await prefs.setStringList('saved_credentials', credentialsToSave);
+      print('Saved ${credentialsToSave.length} credentials to storage');
+    } catch (e) {
+      print('Error saving credentials: $e');
+    }
+  }
+
+  Future<void> loadActivityLogs() async {
+    // For standalone app, maintain logs locally
+    // You could save these to shared_preferences
+    // For now, just keep them in memory
+  }
+
+  Future<void> loadSchedulerStatus() async {
+    // For standalone app, maintain scheduler status locally
     setState(() {
-      activityLog.add(
-        '[${now.hour}:${now.minute}:${now.second}]:\nSchedular Started',
-      );
+      isSchedulerRunning = false;
+      schedulerStatus = 'Stopped';
     });
   }
 
-  void addRow() {
+  DateTime now = DateTime.now();
+
+  Future<void> StartSched() async {
+    // For standalone app, implement local scheduler
+    // This would use Timer.periodic() instead of backend API
+    print('Starting local scheduler...');
+    setState(() {
+      isSchedulerRunning = true;
+      schedulerStatus = 'Running locally';
+    });
+    await loadActivityLogs();
+  }
+
+  void addRow() async {
+    if (user.isNotEmpty && password.isNotEmpty) {
+      String username = user.last.text;
+      String pass = password.last.text;
+      
+      if (username.isNotEmpty && pass.isNotEmpty && pass != '••••••••') {
+        // Check if credential already exists
+        bool alreadyExists = credentials.any((cred) => cred['username'] == username);
+        
+        if (!alreadyExists) {
+          // Add to local credentials list
+          setState(() {
+            credentials.add({
+              'id': credentials.length + 1,
+              'username': username,
+              'encryptedPassword': pass,
+            });
+          });
+          
+          // Save to persistent storage
+          await saveCredentialsToLocal();
+          
+          print('Credential saved: $username');
+          
+          // Update the text field to show saved indicator
+          password.last.text = '••••••••';
+        } else {
+          print('Credential already exists for: $username');
+        }
+      }
+    }
+    
+    // Add empty row for new input
     setState(() {
       user.add(TextEditingController());
       password.add(TextEditingController());
-      activityLog.add(
-        '[${now.hour}:${now.minute}:${now.second}]:\nNew Row added',
-      );
     });
   }
 
-  void clearLog() {
+  void clearLog() async {
+    // Clear local activity log
     setState(() {
       activityLog.clear();
     });
   }
 
-  void logIN() {
-    setState(() {
-      activityLog.add('Login Successful');
-    });
+  void logIN() async {
+    try {
+      bool loginSuccessful = false;
+      
+      // First try with any fresh credentials in input fields
+      for (int i = 0; i < user.length; i++) {
+        if (user[i].text.isNotEmpty && 
+            i < password.length && 
+            password[i].text.isNotEmpty && 
+            password[i].text != '••••••••') {
+          
+          lastUsedUsername = user[i].text; // Track for logout
+          print('Attempting login with fresh credentials: ${user[i].text}');
+          
+          setState(() {
+            activityLog.add('${DateTime.now().toString().substring(11, 19)}: Attempting login for ${user[i].text}');
+          });
+          
+          final result = await WiFiAuthService.attemptLogin(
+            user[i].text, 
+            password[i].text
+          );
+          
+          if (result['success'] == true) {
+            print('Login successful: ${result['message']}');
+            setState(() {
+              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+            });
+            loginSuccessful = true;
+            break;
+          } else {
+            print('Login failed: ${result['message']}');
+            setState(() {
+              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+            });
+          }
+        }
+      }
+      
+      // If no fresh credentials worked, try saved credentials
+      if (!loginSuccessful && credentials.isNotEmpty) {
+        for (var cred in credentials) {
+          lastUsedUsername = cred['username']; // Track for logout
+          print('Trying saved credential: ${cred['username']}');
+          
+          setState(() {
+            activityLog.add('${DateTime.now().toString().substring(11, 19)}: Trying saved credential ${cred['username']}');
+          });
+          
+          final result = await WiFiAuthService.attemptLogin(
+            cred['username'], 
+            cred['encryptedPassword']
+          );
+          
+          if (result['success'] == true) {
+            print('Login successful with saved credential: ${result['message']}');
+            setState(() {
+              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+            });
+            loginSuccessful = true;
+            break;
+          } else {
+            print('Login failed with saved credential: ${result['message']}');
+            setState(() {
+              activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+            });
+          }
+        }
+      }
+      
+      if (!loginSuccessful) {
+        setState(() {
+          activityLog.add('${DateTime.now().toString().substring(11, 19)}: All login attempts failed. Please check credentials and network.');
+        });
+      }
+      
+    } catch (e) {
+      print('Error during login: $e');
+      setState(() {
+        activityLog.add('${DateTime.now().toString().substring(11, 19)}: Login error - $e');
+      });
+    }
   }
 
-  void logOUT() {
-    setState(() {
-      activityLog.add('Logout Successful');
-    });
+  void logOUT() async {
+    try {
+      setState(() {
+        activityLog.add('${DateTime.now().toString().substring(11, 19)}: Attempting logout...');
+      });
+      
+      // Use the last successfully logged in username for logout
+      final result = await WiFiAuthService.attemptLogout(lastUsedUsername.isNotEmpty ? lastUsedUsername : null);
+      
+      if (result['success'] == true) {
+        print('Logout successful: ${result['message']}');
+        setState(() {
+          activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+          lastUsedUsername = ''; // Clear after successful logout
+        });
+      } else {
+        print('Logout failed: ${result['message']}');
+        setState(() {
+          activityLog.add('${DateTime.now().toString().substring(11, 19)}: ${result['message']}');
+        });
+      }
+      
+    } catch (e) {
+      print('Error during logout: $e');
+      setState(() {
+        activityLog.add('${DateTime.now().toString().substring(11, 19)}: Logout error - $e');
+      });
+    }
   }
 
-  void removeRow(int index) {
+  void removeRow(int index) async {
     setState(() {
-      user.removeAt(index);
-      password.removeAt(index);
-      activityLog.add(
-        '[${now.hour}:${now.minute}:${now.second}]:\nRow Deleted',
-      );
+      // Remove from input lists
+      if (index < user.length) user.removeAt(index);
+      if (index < password.length) password.removeAt(index);
+      
+      // Remove from saved credentials if it's a saved credential
+      if (index < credentials.length) {
+        credentials.removeAt(index);
+        print('Credential removed from storage');
+      }
     });
+    
+    // Update saved credentials in storage
+    await saveCredentialsToLocal();
   }
 
   @override
@@ -86,15 +328,8 @@ class _HomePage extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 0, 0, 0),
-        flexibleSpace: Stack(
-          children: [
-            Positioned(
-              left: 120,
-              top: 35,
-              child: Text('Wifi Auto Logger', style: TextStyle(fontSize: 25)),
-            ),
-          ],
-        ),
+        title: Text('WifiAL', style: TextStyle(fontSize: 25)),
+        centerTitle: true,
       ),
 
       body: Container(
@@ -229,7 +464,7 @@ class _HomePage extends State<HomePage> {
                       onChangedST: (val) => setState(() => isChecked2 = val),
                       onChangedAL: (val) => setState(() => isChecked3 = val),
                       SpecTimeController: SpecTime,
-                      Start: StartSched,
+                      Start: () async => await StartSched(),
                     ),
                   );
                 },
@@ -330,9 +565,9 @@ class SchedulerSettingsSheet extends StatefulWidget {
   final ValueChanged<bool> onChangedInt;
   final ValueChanged<bool> onChangedST;
   final ValueChanged<bool> onChangedAL;
-  final VoidCallback Start;
+  final Future<void> Function() Start;
 
-  SchedulerSettingsSheet({
+  const SchedulerSettingsSheet({super.key, 
     required this.isChecked1,
     required this.isChecked2,
     required this.isChecked3,
@@ -488,8 +723,9 @@ class _SchedulerSettingsSheetState extends State<SchedulerSettingsSheet> {
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: OutlinedButton(
-                    onPressed: (){widget.Start();
-                    Navigator.pop(context);
+                    onPressed: () async {
+                      await widget.Start();
+                      Navigator.pop(context);
                     },
                     child: Text('Start Schedular'),
                   ),

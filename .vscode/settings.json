@@ -1,0 +1,19 @@
+{
+    "java.jdt.ls.java.home": "C:\\Program Files\\Java\\jdk-23",
+    "java.project.sourcePaths": [
+        "wififront/backend/src/main/java"
+    ],
+    "java.project.outputPath": "wififront/backend/target/classes",
+    "java.project.referencedLibraries": [
+        "wififront/backend/lib/**/*.jar"
+    ],
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-23",
+            "path": "C:\\Program Files\\Java\\jdk-23"
+        }
+    ],
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "cmake.sourceDirectory": "C:/Users/jhaha/OneDrive/Desktop/WiFiAutologger/wififront/windows"
+}
